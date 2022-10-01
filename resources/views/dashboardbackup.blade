@@ -1,0 +1,422 @@
+@extends('master')
+
+@section('content')
+@push('topscripts')
+<link rel="stylesheet" type="text/css" href="{{ asset('plugins/morris-chart/morris.css') }}">
+@endpush
+
+
+
+<!--body wrapper start-->
+<div class="wrapper">
+
+  <!--Start Page Title-->
+  <div class="page-title-box">
+    <h4 class="page-title">Dashboard </h4>
+    <ol class="breadcrumb">
+      <li>
+        <a href="#">Dashboard</a>
+      </li>
+
+      <li class="active">
+        Dashboard 1
+      </li>
+    </ol>
+    <div class="clearfix"></div>
+  </div>
+  <!--End Page Title-->          
+
+
+
+  <!--Start row-->
+  <div class="row">
+    <!--Start info box-->
+    <div class="col-md-3">
+      <div class="analytics-box white-box">
+        <h3>Total Registrations</h3>
+        <div class="analytics-info">
+          <div class="analytics-stats">
+            {{ $totalregistrations }} 
+          </div>
+          <span id="sparklinestats1"></span>
+        </div>
+      </div>
+    </div> 
+    <!--End info box-->
+    <div class="col-md-3">
+      <div class="analytics-box white-box">
+        <h3>Total Completion</h3>
+        <div class="analytics-info">
+          <div class="analytics-stats">
+            {{ $totalcompletion }} 
+          </div>
+          <span id="sparklinestats2"></span>
+        </div>
+      </div>
+    </div> 
+    <!--End info box-->
+    <div class="col-md-3">
+      <div class="analytics-box white-box">
+        <h3>Pending Query <span class="badge badge-light">{{$pendingpgdmqueries}} + {{$pendingipqueries}}</span></h3>
+        <div class="analytics-info">
+          <div class="analytics-stats">
+            {{ $pendingqueries }}
+          </div>
+          <span id="sparklinestats3"></span>
+        </div>
+      </div>
+    </div> 
+    <!--End info box-->
+    <div class="col-md-3">
+      <div class="analytics-box white-box">
+        <h3>Total Conversion</h3>
+        <div class="analytics-info">
+          <div class="analytics-stats">
+            {{ $totalconversion }} 
+          </div>
+          <span id="sparklinestats4"></span>
+        </div>
+      </div>
+    </div> 
+    <!--End info box-->
+
+
+  </div>
+  <!--End row-->
+  <div class="white-box">
+    <h4 class="header-title">Admin Registraion</h4>
+    <div class="button-wrap">
+      <a href="{{ route('register') }}" class="btn btn-primary">Register New User</a>
+      <a href="{{ route('assignroles') }}" class="btn btn-primary">Assign Roles</a>
+
+    </div>
+  </div>
+  <!--End row-->
+  <div class="white-box">
+    <h4 class="header-title">Reports</h4>
+    <div class="button-wrap">
+      <a href="{{ route('downloadcompletewithremarksexcel') }}" class="btn btn-primary">Download Remarks Report</a>
+      <a class="btn btn-primary center-margin" href="{{ route('downloadcompleteexcel') }}">Download Complete Excel</a>
+      <a class="btn btn-primary center-margin" href="{{ route('downloaduniqueexcel') }}">Download Unique Excel</a>
+      <a class="btn btn-primary center-margin" href="{{ route('formConversionReportExcel') }}">Form Conversion Report Excel</a>
+      <hr>
+      <a href="{{ route('formcomparisionreport') }}" class="btn btn-primary">Form Comparision Report</a>
+      <a href="{{ route('dailyreport') }}" class="btn btn-primary">Daily Report</a>
+      <a href="{{ route('gdpireport') }}" class="btn btn-primary">GD/PI Report</a>
+      <a href="{{ route('gdpiSourcereport') }}" class="btn btn-primary">Form Conversion Report</a>
+      <a href="{{ route('sourcequalityreport') }}" class="btn btn-primary">Source Quality Report</a>
+      <a href="{{ route('sourcequalityreporttwo') }}" class="btn btn-primary">Lead Quality Report</a>
+      <a href="{{ route('sourcequalityreportthree') }}" class="btn btn-primary">Lead Flow Chart</a>
+      <a href="{{ route('dailycounsellordata') }}" class="btn btn-primary">Counsellor Followup Record</a>
+      <a href="{{ route('counsellorgraph') }}" class="btn btn-primary">Counsellor Graph</a>
+      <a href="{{ route('dailyassigneddata') }}" class="btn btn-primary">Daily Assigned Data</a>
+      <hr>
+      <a href="{{ route('gdpiattendance') }}" class="btn btn-primary">GDPI Attendance</a>
+      <a href="{{ route('admissionslist') }}" class="btn btn-primary">Admission Taken</a>
+      <a href="{{ route('sourceadmissionrecord') }}" class="btn btn-primary">Source Admission Record</a>
+    </div>
+
+  </div>
+
+  <div class="white-box">
+
+    <div class="col-md-6"> 
+      <h4 class="header-title">Source Charts</h4>
+      <div id="chart_div_source"  style="height: 500px;"></div>
+    </div>
+    <div class="col-md-6"> 
+      <h4 class="header-title">Remarks Charts</h4>
+      <div id="chart_div_remarks" style="height: 500px;"></div>
+    </div>
+
+  </div>
+
+
+  <!--Start row-->  
+  <div class="row">
+
+
+
+    <!-- Start inbox widget-->
+    <div class="col-md-12">
+      <div class="white-box">
+        <div id="visualization" style="margin: 1em"> </div>
+        <h2 class="header-title"> Progress </h2>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Counsellor Name</th>
+                <th>Total Assigned</th>
+                <th>Total Completed</th>
+                <th>Status</th>
+                <th colspan="2">Progress</th>
+
+              </tr>
+            </thead>
+            <tbody>
+              <?php $i = 0; ?>
+              {{-- @foreach($counsellorprogress as $progress)
+              <?php $i++; ?>
+              <tr>
+                <td>{{ $i }}</td>
+                <td><a href="{{ route('counsellorfollowuplist',['id' => $progress->id, 'name' => strtolower($progress->firstname) ]) }}"> {{ $progress->firstname." ".$progress->lastname  }}</a></td>
+                <td><span class="badge badge-primary">{{ $progress->totalassigned }}</span></td>
+                <td><span class="badge badge-info">{{ $progress->totalcompleted }}</span></td>
+                @if($progress->perc <= 30)
+                <td><span class="label label-danger">Started</span></td>
+                @elseif($progress->perc >= 31 && $progress->perc <= 85)
+                <td><span class="label label-warning">In Progress</span></td>
+                @elseif($progress->perc >= 86 && $progress->perc <= 99)
+                <td><span class="label label-info">Almost Completed</span></td>
+                @elseif($progress->perc == 100)
+                <td><span class="label label-success">Completed</span></td>
+
+                @endif
+                <td><div class="progress progress-striped progress-sm">
+                  <div class="progress-bar 
+                  @if($progress->perc <= 30) progress-bar-danger 
+                  @elseif($progress->perc >= 31 && $progress->perc <= 85) progress-bar-warning 
+                  @elseif($progress->perc >= 86 && $progress->perc <= 99) progress-bar-info 
+                  @elseif($progress->perc == 100) progress-bar-success @endif" style="width: {{ $progress->perc }}%;"></div>
+                </div></td>
+                <td>{{ $progress->perc }}% Completed</td>
+              </tr>
+              @endforeach --}}
+
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="col-md-12">
+      <div class="white-box">
+        <div id="chart_div" style="height: 500px;"></div>
+      </div>
+    </div>
+
+  </div>
+  <!--End row-->
+
+</div>
+<!-- End Wrapper-->
+@push('bottomscripts')
+<script src="{{ asset('plugins/jquery-sparkline/jquery.charts-sparkline.js') }}"></script>
+<script src="{{ asset('plugins/morris-chart/morris.js') }}"></script>
+<script src="{{ asset('plugins/morris-chart/raphael-min.js') }}"></script>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script type="text/javascript">
+  google.charts.load('current', {'packages':['corechart']});
+  google.charts.setOnLoadCallback(drawVisualization);
+
+  function drawVisualization() {
+// Some raw data (not necessarily accurate)
+var google_data = {!! json_encode($google_array) !!};
+
+
+var data = google.visualization.arrayToDataTable(google_data);
+
+var options = {
+  title : 'Counsellor Daily Calling Graph',
+  vAxis: {title: 'Calls'},
+  hAxis: {title: 'Days'},
+  seriesType: 'bars',
+  series: {5: {type: 'line'}}
+};
+
+var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
+chart.draw(data, options);
+}
+</script>
+<script type="text/javascript">
+  google.charts.load('current', {packages: ['corechart', 'bar']});
+  google.charts.setOnLoadCallback(drawBasic);
+
+  function drawBasic() {
+
+    var google_data = {!! json_encode($sourcedata_chart) !!};
+
+    var data = google.visualization.arrayToDataTable(google_data);
+
+    var options = {
+      title: 'Source Chart',
+      chartArea: {width: '50%'},
+      hAxis: {
+        title: 'Total Counts',
+        minValue: 0
+      },
+      vAxis: {
+        title: 'Sources'
+      },
+      textStyle: {
+        fontName: 'Times-Roman',
+        fontSize: 6,
+        bold: true,
+        italic: true,
+// The color of the text.
+color: '#871b47',
+// The color of the text outline.
+auraColor: '#d799ae',
+// The transparency of the text.
+opacity: 0.8
+}
+};
+
+var chart = new google.visualization.BarChart(document.getElementById('chart_div_source'));
+
+chart.draw(data, options);
+}
+</script>
+<script type="text/javascript">
+  google.charts.load('current', {packages: ['corechart', 'bar']});
+  google.charts.setOnLoadCallback(drawBasic);
+
+  function drawBasic() {
+
+    var google_data = {!! json_encode($remarksdata_chart) !!};
+
+    var data = google.visualization.arrayToDataTable(google_data);
+
+    var options = {
+      title: 'Remarks Chart',
+      chartArea: {width: '50%'},
+      hAxis: {
+        title: 'Total Counts',
+        minValue: 0
+      },
+      vAxis: {
+        title: 'Remarks'
+      },
+      textStyle: {
+        fontName: 'Times-Roman',
+        fontSize: 6,
+        bold: true,
+        italic: true,
+// The color of the text.
+color: '#871b47',
+// The color of the text outline.
+auraColor: '#d799ae',
+// The transparency of the text.
+opacity: 0.8
+}
+};
+
+var chart = new google.visualization.BarChart(document.getElementById('chart_div_remarks'));
+
+chart.draw(data, options);
+}
+</script>
+
+<!-- BEGIN PAGE LEVEL SCRIPTS -->
+<script src="{{ asset('plugins/chart-js/Chart.js') }}"></script>
+
+<script src="{{ asset('pages/dashboard.js') }}"></script>
+<script type="text/javascript">
+  $(document).ready(function () {
+
+    /* Sparkline chart  */
+
+    var sparklineLogin = function() { 
+
+
+      $('#sparklinestats1').sparkline([ 7, 9, 11, 10, 11, 12, 9, 12], {
+        type: 'bar',
+        height: '30',
+        barWidth: '4',
+        resize: true,
+        barSpacing: '5',
+        barColor: '#E5051F'
+      });
+
+
+      $('#sparklinestats2').sparkline([ 7, 9, 11, 10, 11, 12, 9, 12], {
+        type: 'bar',
+        height: '30',
+        barWidth: '4',
+        resize: true,
+        barSpacing: '5',
+        barColor: '#BA0C83'
+      });
+
+
+
+
+      $('#sparklinestats3').sparkline([ 7, 9, 11, 10, 11, 12, 9, 12], {
+        type: 'bar',
+        height: '30',
+        barWidth: '4',
+        resize: true,
+        barSpacing: '5',
+        barColor: '#E05316'
+      });
+      $('#sparklinestats4').sparkline([ 7, 9, 11, 10, 11, 12, 9, 12], {
+        type: 'bar',
+        height: '30',
+        barWidth: '4',
+        resize: true,
+        barSpacing: '5',
+        barColor: '#7134E3'
+      });
+
+
+
+    }
+    var sparkResize;
+
+    $(window).resize(function(e) {
+      clearTimeout(sparkResize);
+      sparkResize = setTimeout(sparklineLogin, 500);
+    });
+    sparklineLogin();
+
+  });
+
+
+</script>
+
+{{-- <script type="text/javascript">
+$.ajax({
+url: 'https://www.google.com/jsapi?callback',
+cache: true,
+dataType: 'script',
+success: function(){
+
+google.load('visualization', '1', {packages:['geochart'], 'callback' : function()
+{
+
+$.ajax({
+type: "POST",
+dataType: "json",
+data: {id: 'YOURIDHERE'},
+url: '{{ route('heatmap') }}',
+success: function(jsondata) {
+console.log(jsondata);
+var data = google.visualization.arrayToDataTable(jsondata);
+
+var opts = {
+region: 'IN',
+displayMode: 'regions',
+resolution: 'provinces',
+width: 640, 
+height: 480
+};
+
+//var options = {title: 'HeatMap'};
+
+var chart = new google.visualization.GeoChart(document.getElementById('visualization'));
+chart.draw(data, opts);
+}
+});    
+
+
+}
+});
+return true;
+}
+});
+</script> --}}
+@endpush
+@endsection

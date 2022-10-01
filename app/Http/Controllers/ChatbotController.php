@@ -1,0 +1,307 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+
+use App\Http\Requests;
+
+use App\Model\Chatbot;
+use App\Model\Chatbotuser;
+use App\Model\Chatbotchat;
+use App\Model\MyForm;
+
+use Carbon\Carbon;
+
+
+class ChatbotController extends Controller
+{
+	public function chatbotTest(Request $request)
+    {
+    	$chatbotusers = $request->cookie('chatbotusers');
+        //$chatbotusers = "";
+    	if(empty($request->cookie('chatbotusers'))) {
+    		
+            $oldchats = array();
+    	} else {
+            $cahtbotuserdetail = Chatbotuser::where('chatbot_id', $chatbotusers)->first();
+            if(empty($cahtbotuserdetail)) {
+                $oldchats = array();
+            } else {
+                //fetch old Chats
+                $oldchats     = Chatbotchat::where('user_id',$chatbotusers)
+                                            ->get();
+
+                /*$data = array();
+                foreach ($oldchats as $key => $old) {
+                    $date = date("F j,Y",strtotime($old->created_at));
+                    //dd($date);
+                    if(array_key_exists($date,$data)){
+                        $data[$date][] = $old;
+                    }else{
+                        array_push($data,$old[$date]);
+                        $data[$date][] = $old;
+                    }
+                }
+                $oldchatsorted  = $data;*/
+                //dd($oldchatsorted);
+            }
+    		
+    	}
+
+    	return view('chatbot.test',compact('request','chatbotusers','oldchats'));	
+    }
+
+    public function addCookies(Request $request){
+		$type = $request->type;
+		if($type == 'chatbotusers')
+		{
+			if(empty($request->cookie('chatbotusers')))
+			{
+				$response = new Response;
+				$userid = getIpAddress().rand();
+				$lifetime = 60 * 24 * 365;// one year
+				//$response->withCookie(cookie()->forever('chatbotusers', $userid));
+				return response($userid)->cookie(
+				    'chatbotusers', $userid, $lifetime
+				);
+
+				$userid = getIpAddress().rand();
+				return $userid;
+			}
+		}
+		
+		//return $response;
+	}
+
+    public function chatbotResponse(Request $request)
+    {
+    	if(!empty($request->messageid)){
+    		
+    		//Search From Questions
+    		$chatbot     = Chatbot::where('id',$request->messageid)
+    									->first();
+
+            
+            $sender_type = $request->buttontype == 'buttontext' ? 'user' : 'bot';
+            if($chatbot->type != 'button' OR $request->buttontype == 'buttontext') {
+                $chatbotusersid = $request->cookie('chatbotusers');
+                $chatbotchat = new Chatbotchat;
+                $chatbotchat->user_id     = $chatbotusersid;
+                $chatbotchat->sender_type = $sender_type;
+                $chatbotchat->message     = $chatbot->text;
+                $chatbotchat->save();    
+            } 
+            
+
+    		return json_encode(['id' =>$chatbot->id,'message' => $chatbot->text, 'type' => $chatbot->type, 'messagetype' => $request->messagetype, 'child' => explode(',', $chatbot->child_id)]);
+    		
+			/*$data = "I am Sorry but I am not exactly clear how to help you";
+
+			//Insert into Database
+
+			return $data;*/
+			        
+		}
+    }
+
+    public function infoFormSubmit(Request $request) {
+    	
+    	$chatbotusersid = $request->cookie('chatbotusers');
+    	$current_time = Carbon::now();
+    	$message = "<b>Details Provided By You</b>\n\n Name: {$request->name} \n Email: {$request->email} \n Phone Number: {$request->phone} \n City: {$request->city} \n Course: {$request->course}";
+    	
+    	//Insert Into ChatbotUser Table
+    	$chatbotuser = new Chatbotuser;
+		$chatbotuser->chatbot_id = $chatbotusersid;
+		$chatbotuser->name       = $request->name;
+		$chatbotuser->email      = $request->email;
+		$chatbotuser->phone      = $request->phone;
+		$chatbotuser->city       = $request->city;
+		$chatbotuser->course     = $request->course;
+		$chatbotuser->save();
+    	
+    	//Insert Into Query Table
+		$myform = new MyForm;
+		$myform->sourcesno = $chatbotusersid;
+		$myform->name      = $request->name;
+		$myform->email     = $request->email;
+		$myform->phone     = $request->phone;
+		$myform->city      = $request->city;
+		$myform->course    = $request->course;
+		$myform->source    = "Chatbot";
+		$myform->query     = "";
+		$myform->posted_at = $current_time;
+		$myform->status    = 'open';
+        $myform->save();
+
+    	//Insert Into Chat Table
+    	//Insert Welcome Message
+    	$chatbot     = Chatbot::where('parent_id',0)
+    						->where('type','text')
+    						->orderBy('priority', 'asc')
+    						->get();
+    	foreach ($chatbot as $value) {
+    		$chatbotchat = new Chatbotchat;
+			$chatbotchat->user_id     = $chatbotusersid;
+			$chatbotchat->sender_type = 'bot';
+			$chatbotchat->message     = $value->text;
+			$chatbotchat->save();
+    	}
+
+    	$chatbotchat = new Chatbotchat;
+		$chatbotchat->user_id     = $chatbotusersid;
+		$chatbotchat->sender_type = 'user';
+		$chatbotchat->message     = $message;
+		$chatbotchat->save();
+
+        
+
+        $chatbotget     = Chatbot::where('id',3)
+                                        ->first();
+
+        $childchat = Chatbot::select('id')
+                            ->where('parent_id', $chatbotget->id)
+                            ->orderBy('priority', 'asc')
+                            ->get()->toArray();
+
+
+        //Replace {} with variable
+        preg_match_all('/{(\w+)}/', $message, $matches);
+        $afterStr = $message;
+        foreach ($matches[0] as $index => $var_name) {
+          if (isset(${$matches[1][$index]})) {
+            $afterStr = str_replace($var_name, ${$matches[1][$index]}, $afterStr);
+          }
+        }
+        //return $afterStr;
+        $message = $afterStr;
+        
+
+    	
+    	return json_encode(['response'=> $message, 'message' => $chatbot[0]->text, 'type' => 'form', 'messagetype' => $request->messagetype, 'child' => $childchat]);
+    	//return $message;
+    	//dd($request->all());
+    }
+
+    public function chatbotChildResponse(Request $request)
+    {
+        //dd($request->messageid);
+        $list = $request->messageid;
+        $list = json_decode($list, true);
+
+        $textmessage = array();
+        $buttonmessage = array();
+        foreach ($list as $key => $value) {
+            //dd($value);
+            $chatbot     = Chatbot::select('text','type')->where('id',$value)
+                                        ->first();
+            if($chatbot->type == 'text') {
+
+                //Replace {} with variable
+                preg_match_all('/{(\w+)}/', $chatbot->text, $matches);
+                $afterStr = $chatbot->text;
+                foreach ($matches[0] as $index => $var_name) {
+                  if (isset(${$matches[1][$index]})) {
+                    $afterStr = str_replace($var_name, ${$matches[1][$index]}, $afterStr);
+                  }
+                }
+                $chatbot->text = $afterStr;
+
+
+                $textmessage[$value] = $chatbot->text;
+            } elseif($chatbot->type == 'button') {
+                $buttonmessage[$value] = $chatbot->text;
+            }
+            
+        }
+
+        
+
+        
+
+        $message = array('textmessage' => $textmessage, 'buttonmessage' => $buttonmessage);
+        return json_encode($message);
+    }
+
+    public function welcomeChat(Request $request)
+    {
+    	if(isset($request->test)){
+
+
+			//Search From Questions
+			//Search From Random Text
+			$data = "I am Sorry but I am not exactly clear how to help you";
+
+			//Insert into Database
+
+
+			        
+		}
+    }
+
+    //global $chatbot = array();
+
+    public function dragbox(Request $request)
+    {
+
+    	$chatbot = Chatbot::where('parent_id', 0)
+    						->orderBy('priority', 'asc')
+    						->get()->keyBy('id')->toArray();
+    						
+
+    	$chatbotchain = ChatbotController::treeHouse($chatbot);
+
+    	return view('chatbot.dragbox',compact('request', 'chatbotchain'));	
+    }
+
+    public function treeHouse($chatbot) //recursion
+    {
+        foreach ($chatbot as $bot) {
+            if(!empty($botchild = json_decode($bot['child_id']))) {
+                dd($botchild);
+                $q = Chatbot::where('child_id', $bot['id'])
+                                ->orderBy('priority', 'asc')
+                                ->get()->keyBy('id')->toArray();
+
+                if(!empty($q)) {
+                    
+                    $chatbot[$bot['id']]['child'] = $q;
+                    
+
+                    $r = ChatbotController::treeHouse($chatbot[$bot['id']]['child']);
+
+                    $chatbot[$bot['id']]['child'] = $r;
+                    
+                }
+            }
+            
+        }
+        return $chatbot;
+    }
+
+    /*public function treeHouse($chatbot)	//recursion
+    {
+    	foreach ($chatbot as $bot) {
+    		$q = Chatbot::where('parent_id', $bot['id'])
+    						->orderBy('priority', 'asc')
+    						->get()->keyBy('id')->toArray();
+
+    		//dd($q);
+    		if(!empty($q)) {
+    			
+    			$chatbot[$bot['id']]['child'] = $q;
+    			
+
+    			$r = ChatbotController::treeHouse($chatbot[$bot['id']]['child']);
+
+    			$chatbot[$bot['id']]['child'] = $r;
+    			
+    		}
+    		
+    	}
+    	return $chatbot;
+    }*/
+    
+}

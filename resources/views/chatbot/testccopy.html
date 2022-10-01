@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="{{ asset('css/parsley.css') }}">
+  <script src="{{ asset('js/parsley.min.js') }}"></script>
+<style>
+body {
+  margin: 0 auto;
+  max-width: 800px;
+  padding: 0 20px;
+}
+
+.container1 {
+  border: 2px solid #dedede;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  padding: 10px;
+  margin: 10px 0;
+}
+
+.darker {
+  border-color: #ccc;
+  background-color: #ddd;
+}
+
+.white {
+  border-color: #ccc;
+  background-color: #fff;
+}
+
+.container1::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+
+.container1 img {
+  float: left;
+  max-width: 50px;
+  width: 100%;
+  margin-right: 20px;
+  border-radius: 50%;
+}
+
+.container1 img.right {
+  float: right;
+  margin-left: 20px;
+  margin-right:0;
+}
+
+.time-right {
+  float: right;
+  color: #aaa;
+}
+
+.time-left {
+  float: left;
+  color: #999;
+}
+
+div.sticky {
+  position: -webkit-sticky;
+  position: sticky;
+  bottom: 0;
+  margin-top: 200px;
+  background-color: #ddd;
+  padding: 10px 0 0 10px;
+  font-size: 20px;
+}
+.square {
+  height: auto;
+  width: 810px;
+  padding: 8px;
+  background-color: #fff;
+  border: 2px solid #dedede;
+ 
+}
+
+.container1.darker {
+  margin-left: 400px;
+}
+
+
+/*3rd party chatbot code*/
+/*.btn {
+  display: none;
+}
+
+.square {
+  width: auto;
+  padding: 0;
+  border: none;
+}
+
+.container1.darker {
+    margin-left: 50px;
+    margin-right: 0;
+}
+
+.container1 {
+  margin-right: 50px;
+  margin-left: 0;
+}*/
+</style>
+</head>
+<body>
+
+<span id="ref">
+<div class="square">
+{{-- <center><h2>Chat Messages</h2></center> --}}
+
+<br/>
+  <div class="messagecontainer">
+    @foreach($oldchats as $chats) 
+      @if($chats->sender_type == 'bot')
+        <div class="container1 darker">
+          <img src="{{ asset('images/chatbot/chatbot.png') }}" alt="Avatar" class="right" style="width:100%;">
+          <p>{!! $chats->message !!}</p>
+          <span class="time-left">{{ date('M d,Y h:i', strtotime($chats->created_at))}}</span>
+        </div>
+      @else
+        <div class="container1">
+          <img src="{{ asset('images/chatbot/user.jpg') }}" alt="Avatar" style="width:100%;">
+          <p>{!! $chats->message !!}</p>
+          <span class="time-left">{{ date('M d,Y h:i', strtotime($chats->created_at))}}</span>
+        </div>
+      @endif
+      
+    @endforeach
+    
+  </div>
+</div>
+</span>
+<br/>
+
+
+@if(empty($oldchats))
+<script>
+  function addcookies() {
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+    });
+    
+    $.ajax({
+        type  : 'POST',
+        url   : '{{ route('addcookies') }}',
+        data : {type: 'chatbotusers' },
+      success: function(result){
+        var chabotuserid = result;
+        //alert('new user');
+        botmessage(1, 'bot');
+        botmessage(2, 'bot');
+        botmessage(3, 'bot');
+      }           
+    });
+  }
+
+
+  addcookies();       //Add Chatbot User in Cookies
+  
+</script>
+@endif
+<script type="text/javascript">
+  function botmessage(messageid, messagetype) {
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+    });
+    //console.log(messageid);
+    $.ajax({
+        type  : 'POST',
+        url   : '{{ route('chatbotresponse') }}',
+        data : {messageid: messageid , type: 'bot' },
+        success: function(result){
+          var obj = JSON.parse(result);
+          console.log(obj);
+          if(messagetype == 'bot') {
+            if(obj['type'] == 'text') {
+              //console.log(obj['message']);
+              
+                $('.messagecontainer').append('<div class="container1 darker"> \
+                  <img src="{{ asset('images/chatbot/chatbot.png') }}" alt="Avatar" class="right" style="width:100%;"> \
+                  <p>'+ obj['message'] +'</p> \
+                  <span class="time-left">Date Time (Human)</span> \
+                </div>');  
+
+                substr = obj.child;
+                //console.log(substr);
+                if(substr != '') {
+                  var randid = Math.floor(Math.random() * (100 - 10 + 1) + 10);
+                  
+                  $('.messagecontainer').append('<div id="'+randid+'" class="childbox"></div>');
+
+                  var arr = [];
+                  substr.forEach(function(item) {
+                      // do something with `item`
+                      //console.log(item.id);
+                      arr.push(item.id);
+                  });
+                  botchildmessage(JSON.stringify(arr), 'bot', randid);
+                }
+            
+            }
+            else if(obj['type'] == 'form') {
+              console.log('Show me form');
+                $('.messagecontainer').append(' \
+                  <div class="container1 white"> \
+                    <form id="submitinfoform" data-parsley-validate> \
+                      {{ csrf_field() }} \
+                      <div class="form-group"> \
+                        <label>Name<span class="required-astrik">*</span></label> \
+                        <input class="form-control" type="text" name="name" required="">   \
+                      </div> \
+                      <div class="form-group"> \
+                        <label>Email<span class="required-astrik">*</span></label> \
+                        <input class="form-control" type="email" name="email" required="">   \
+                      </div> \
+                      <div class="form-group"> \
+                        <label>Phone<span class="required-astrik">*</span></label> \
+                        <input class="form-control" type="tel" name="phone" required="">   \
+                      </div> \
+                      <div class="form-group"> \
+                        <label>City<span class="required-astrik">*</span></label> \
+                        <input class="form-control" type="text" name="city" required="">   \
+                      </div> \
+                      <div class="form-group"> \
+                        <label>Program Interested in<span class="required-astrik">*</span></label> \
+                        <select name="course" class="form-control" required=""> \
+                          <option selected readonly>Program Interested in</option> \
+                          <option>PGDM</option> \
+                          <option>PGDM-IB</option> \
+                          <option>PGDM-RM</option> \
+                          <option>FPM Programme</option> \
+                          <option>MCA</option> \
+                          <option>BCA</option> \
+                          <option>BBA</option> \
+                        </select> \
+                      </div> \
+                      <div class="form-group"> \
+                        <input type="submit" name="submitinfoform">  \
+                      </div> \
+                    </form> \
+                  </div> \
+                  ');
+            }
+            else if(obj['type'] == 'button') {
+
+              $('.messagecontainer').append('<div class="container1 darker"> \
+                <img src="{{ asset('images/chatbot/user.jpg') }}" alt="Avatar" style="width:100%;"> \
+                <p>'+ obj['message'] +'</p> \
+                <span class="time-left">Date Time (Human)</span> \
+              </div>'); 
+
+              substr = obj.child;
+              //console.log(substr);
+              if(substr != '') {
+                var randid = Math.floor(Math.random() * (100 - 10 + 1) + 10);
+                
+                $('.messagecontainer').append('<div id="'+randid+'" class="childbox"></div>');
+
+                var arr = [];
+                substr.forEach(function(item) {
+                    // do something with `item`
+                    //console.log(item.id);
+                    arr.push(item.id);
+                });
+                botchildmessage(JSON.stringify(arr), 'bot', randid);
+              }
+            }
+          } else {
+            //User Side Message
+
+          }
+          //console.log(obj['message']);
+        }           
+    });
+  }
+
+  function botchildmessage(messageid, messagetype, sectionid) {
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+    });
+
+    //var messageid = JSON.stringify(messageid);
+
+
+    $.ajax({
+        type  : 'POST',
+        url   : '{{ route('chatbotchildresponse') }}',
+        data : {messageid: messageid , type: 'bot' },
+        success: function(result){
+          //console.log(result);
+          var obj = JSON.parse(result);
+          var textmessages = obj.textmessage;
+          var buttonmessages = obj.buttonmessage;
+          
+          Object.keys(textmessages).forEach(function(key) {
+            //console.log(textmessages[key]);
+              $('#'+sectionid).append('<div class="container1 darker"> \
+                  <img src="{{ asset('images/chatbot/chatbot.png') }}" alt="Avatar" class="right" style="width:100%;"> \
+                  <p>'+ textmessages[key] +'</p> \
+                  <span class="time-left">Date Time (Human)</span> \
+                </div>'); 
+          });
+
+          Object.keys(buttonmessages).forEach(function(key) {
+            //console.log(key);
+            $('#'+sectionid).append('<button class="eventbutton" data-id='+ key +' >'+ buttonmessages[key] +'</button>');  
+          });
+
+          if(buttonmessages.length  == 0) {
+            botmessage(7, 'bot');
+          } else {
+            $('#'+sectionid).append('<button class="eventbutton" data-id=200 >Request Call Back from Counsellor</button>');  
+          }
+          
+        }           
+    });
+  }
+
+
+  $(document).on('submit', '#submitinfoform', function(event){    
+
+    event.preventDefault();
+    var myform = $(this);
+    if ( $(this).parsley().isValid() ) {
+      $.ajax({
+          type  : 'POST',
+          url   : '{{ route('infoformsubmit') }}',
+          data : myform.serialize(),
+          success: function(result){
+            console.log(result);
+            //Hide Previous Form and Show Details
+            var obj = JSON.parse(result);
+            $('.messagecontainer').append('<div class="container1 darker"> \
+                <img src="{{ asset('images/chatbot/user.jpg') }}" alt="Avatar" style="width:100%;"> \
+                <p>'+ obj['response'] +'</p> \
+                <span class="time-left">Date Time (Human)</span> \
+              </div>');  
+
+            botmessage(4, 'bot');
+            botmessage(5, 'bot');
+          }           
+      });
+    }
+  });
+
+
+  $(document).ready(function() {
+      @if(!empty($oldchats))
+        botmessage(7, 'bot');
+      @endif
+
+      $("body").on("click",".eventbutton",function(){
+          let id = $(this).data('id');
+          $('#'+id).hide();
+          //console.log(id);
+          botmessage(id, 'bot');
+          $(this).parent('.childbox').hide();
+
+      });
+  });
+  
+</script>
+</body>
+</html>
